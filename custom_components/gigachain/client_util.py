@@ -2,6 +2,10 @@ import logging
 from typing import Set
 
 from homeassistant.core import HomeAssistant
+
+from .compat import apply_gigachat_compat_patch
+
+apply_gigachat_compat_patch()
 from langchain_core.messages import SystemMessage
 from langchain_community.chat_models import ChatOpenAI, ChatYandexGPT, ChatAnyscale
 from langchain_gigachat.chat_models import GigaChat
