@@ -2,8 +2,9 @@ import logging
 from typing import Set
 
 from homeassistant.core import HomeAssistant
-from langchain.schema import SystemMessage
-from langchain_community.chat_models import ChatOpenAI, ChatYandexGPT, GigaChat, ChatAnyscale
+from langchain_core.messages import SystemMessage
+from langchain_community.chat_models import ChatOpenAI, ChatYandexGPT, ChatAnyscale
+from langchain_gigachat.chat_models import GigaChat
 
 from .const import (CONF_API_KEY, CONF_ENGINE, CONF_FOLDER_ID, CONF_PROFANITY,
                     CONF_SKIP_VALIDATION, DEFAULT_PROFANITY, ID_GIGACHAT,
