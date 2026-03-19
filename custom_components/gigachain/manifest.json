@@ -11,7 +11,7 @@
   "issue_tracker": "https://github.com/gritaro/gigachain/issues",
   "requirements": [
     "home-assistant-intents",
-    "langchain-gigachat>=0.3.12",
+    "langchain-gigachat>=0.5.0a1",
     "langchain-community>=0.3.20",
     "yandexcloud==0.295.0"
   ],
