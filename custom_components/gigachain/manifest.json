@@ -1,7 +1,7 @@
 {
   "domain": "gigachain",
   "name": "GigaChain",
-  "codeowners": ["@gritaro"],
+  "codeowners": ["@gritaro", "@arbuzov"],
   "config_flow": true,
   "dependencies": ["conversation"],
   "documentation": "https://github.com/gritaro/gigachain",
@@ -15,5 +15,5 @@
     "langchain-community>=0.3.20",
     "yandexcloud==0.295.0"
   ],
-  "version": "0.1.9"
+  "version": "0.1.10"
 }
