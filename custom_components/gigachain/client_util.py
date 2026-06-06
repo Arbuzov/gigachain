@@ -1,4 +1,5 @@
 import logging
+from functools import lru_cache
 from typing import Set
 
 from homeassistant.core import HomeAssistant
@@ -12,8 +13,9 @@ from .const import (CONF_API_KEY, CONF_ENGINE, CONF_FOLDER_ID, CONF_PROFANITY,
 LOGGER = logging.getLogger(__name__)
 
 
+@lru_cache(maxsize=None)
 def _import_chat_openai():
-    """Import ``ChatOpenAI`` lazily.
+    """Import ``ChatOpenAI`` lazily (cached after the first lookup).
 
     It was removed from ``langchain_community.chat_models`` and now lives in the
     dedicated ``langchain_openai`` package. Importing it lazily keeps the
@@ -23,16 +25,22 @@ def _import_chat_openai():
     try:
         from langchain_openai import ChatOpenAI
     except ImportError:  # pragma: no cover - fallback for older stacks
+        LOGGER.warning(
+            "langchain-openai is not installed; falling back to the deprecated "
+            "ChatOpenAI from langchain-community"
+        )
         from langchain_community.chat_models import ChatOpenAI
     return ChatOpenAI
 
 
+@lru_cache(maxsize=None)
 def _import_chat_yandex_gpt():
-    """Import ``ChatYandexGPT`` lazily from langchain_community."""
+    """Import ``ChatYandexGPT`` lazily from langchain_community (cached)."""
     from langchain_community.chat_models import ChatYandexGPT
     return ChatYandexGPT
 
 
+@lru_cache(maxsize=None)
 def _build_local_chat_anyscale():
     """Build the ``LocalChatAnyscale`` subclass lazily.
 
