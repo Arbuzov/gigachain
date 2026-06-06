@@ -3,7 +3,6 @@ from typing import Set
 
 from homeassistant.core import HomeAssistant
 from langchain_core.messages import SystemMessage
-from langchain_community.chat_models import ChatOpenAI, ChatYandexGPT, ChatAnyscale
 from langchain_gigachat.chat_models import GigaChat
 
 from .const import (CONF_API_KEY, CONF_ENGINE, CONF_FOLDER_ID, CONF_PROFANITY,
@@ -11,6 +10,47 @@ from .const import (CONF_API_KEY, CONF_ENGINE, CONF_FOLDER_ID, CONF_PROFANITY,
                     ID_YANDEX_GPT, ID_OPENAI, ID_ANYSCALE, DEFAULT_MODEL, MODELS_ANYSCALE)
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _import_chat_openai():
+    """Import ``ChatOpenAI`` lazily.
+
+    It was removed from ``langchain_community.chat_models`` and now lives in the
+    dedicated ``langchain_openai`` package. Importing it lazily keeps the
+    integration loadable for the default GigaChat engine even when the optional
+    OpenAI backend is not installed.
+    """
+    try:
+        from langchain_openai import ChatOpenAI
+    except ImportError:  # pragma: no cover - fallback for older stacks
+        from langchain_community.chat_models import ChatOpenAI
+    return ChatOpenAI
+
+
+def _import_chat_yandex_gpt():
+    """Import ``ChatYandexGPT`` lazily from langchain_community."""
+    from langchain_community.chat_models import ChatYandexGPT
+    return ChatYandexGPT
+
+
+def _build_local_chat_anyscale():
+    """Build the ``LocalChatAnyscale`` subclass lazily.
+
+    ``ChatAnyscale`` is imported only when the Anyscale engine is selected so a
+    missing optional dependency never blocks loading the integration.
+    """
+    from langchain_community.chat_models import ChatAnyscale
+
+    class LocalChatAnyscale(ChatAnyscale):
+        @staticmethod
+        def get_available_models(
+                anyscale_api_key: str = None,
+                anyscale_api_base: str = None,
+        ) -> Set[str]:
+            """Get available models from configuration."""
+            return MODELS_ANYSCALE
+
+    return LocalChatAnyscale
 
 
 async def validate_client(
@@ -29,14 +69,14 @@ async def validate_client(
             verify_ssl_certs=False,
         )
     elif engine == ID_YANDEX_GPT:
-        client = ChatYandexGPT(
+        client = _import_chat_yandex_gpt()(
             max_tokens=10,
             max_retries=2,
             api_key=user_input[CONF_API_KEY],
             folder_id=user_input[CONF_FOLDER_ID],
         )
     elif engine == ID_ANYSCALE:
-        client = LocalChatAnyscale(
+        client = _build_local_chat_anyscale()(
             max_tokens=10,
             max_retries=2,
             model=DEFAULT_MODEL[ID_ANYSCALE],
@@ -44,12 +84,12 @@ async def validate_client(
         )
     else:
         credentials = user_input[CONF_API_KEY]
-        client = ChatOpenAI(
+        client = _import_chat_openai()(
             max_tokens=10,
-            model=DEFAULT_MODEL[ID_ANYSCALE],
+            model=DEFAULT_MODEL[ID_OPENAI],
             openai_api_key=credentials,
         )
-    res = client([SystemMessage(content="{}")])
+    res = await client.ainvoke([SystemMessage(content="{}")])
     LOGGER.debug(res)
 
 
@@ -63,25 +103,15 @@ async def get_client(hass: HomeAssistant, engine, entry, common_args):
         common_args["api_key"] = entry.data[CONF_API_KEY]
         common_args["folder_id"] = entry.data[CONF_FOLDER_ID]
         common_args["max_retries"] = 2
-        client = ChatYandexGPT(**common_args)
+        client = _import_chat_yandex_gpt()(**common_args)
     elif engine == ID_ANYSCALE:
         common_args["anyscale_api_key"] = entry.data[CONF_API_KEY]
         if common_args["model"] is None:
             common_args["model"] = DEFAULT_MODEL[ID_ANYSCALE]
-        client = LocalChatAnyscale(**common_args)
+        client = _build_local_chat_anyscale()(**common_args)
     else:
         if common_args["model"] is None:
             common_args["model"] = DEFAULT_MODEL[ID_OPENAI]
         common_args["openai_api_key"] = entry.data[CONF_API_KEY]
-        client = ChatOpenAI(**common_args)
+        client = _import_chat_openai()(**common_args)
     return client
-
-
-class LocalChatAnyscale(ChatAnyscale):
-    @staticmethod
-    def get_available_models(
-            anyscale_api_key: str = None,
-            anyscale_api_base: str = None,
-    ) -> Set[str]:
-        """Get available models from configuration."""
-        return MODELS_ANYSCALE
